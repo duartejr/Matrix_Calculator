@@ -1,216 +1,225 @@
-package calculator
-import java.math.BigInteger
-import java.util.Scanner
-import kotlin.math.absoluteValue
-import kotlin.math.pow
+def read_matrix(name):
+    op = int
+    lines, cols = map(int, input(f'Enter size of{name}').split(' '))
+    matrix = []
+    print(f'Enter{name}')
 
-var op = "+"
-val variables = mutableMapOf<String, BigInteger>()
+    for _ in range(lines):
+        line = input()
 
-fun main() {
-    val input = Scanner(System.`in`)
-    var cmd = ""
+        if '.' in line:
+            op = float
 
-    while (true) {
-        cmd = input.nextLine().replace(" ", "")
+        line = list(map(op, line.split(' ')))
+        matrix.append(line)
 
-        if (cmd == "") continue
+    return matrix
 
-        if (cmd.startsWith("/")) {
-            if (cmd == "/exit") break
-            if (cmd == "/help") {
-                println("The program calculates the sum of numbers")
+
+def print_matrix(matrix, fmt="d"):
+    if fmt == "f":
+        for i in range(len(matrix)):
+            for j in range(len(matrix[0])):
+                if matrix[i][j] == 0.0:
+                    matrix[i][j] = "0"
+                    continue
+                matrix[i][j] = str(matrix[i][j])
+
+    for line in matrix:
+        print(*line, sep=' ')
+
+
+def add_matrix():
+    m1 = read_matrix(' first matrix: ')
+    m2 = read_matrix(' second matrix: ')
+
+    if len(m1) != len(m2) or len(m1[0]) != len(m2[0]):
+        print('The operation cannot be performed.')
+        return None
+
+    ans = []
+
+    for l in range(len(m1)):
+        line = []
+        for c in range(len(m1[0])):
+            line.append(m1[l][c] + m2[l][c])
+        ans.append(line)
+
+    print('The result is:')
+    print_matrix(ans)
+
+
+def mult_const(m, n):
+    for l in range(len(m)):
+        for c in range(len(m[0])):
+            if m[l][c] == 0:
                 continue
-            }
-            println("Unknown command")
-            continue
-        }
+            m[l][c] *= n
+    return m
 
-        if (cmd.contains("=")) {
-            assertVar(cmd)
-            continue
-        }
 
-        cmd = clearRepeated(cmd)
-        eval(infixToPostFix(cmd))
-    }
-    println("Bye!")
-}
+def multiply_matrix_const():
+    m = read_matrix(' matrix: ')
+    n = input('Enter constant: ')
 
-fun infixToPostFix(exp: String): MutableList<String>{
-    //initializing empty String for result
-    var result = mutableListOf<String>()
-    var error = mutableListOf<String>("Invalid expression")
+    if '.' in n:
+        n = float(n)
+    else:
+        n = int(n)
 
-    //initializing empty stack
-    val stack = mutableListOf<Char>()
-    var n = 0
+    prod = mult_const(m, n)
 
-    for (i in exp.indices) {
-        val c = exp[i]
+    print('The result is:')
+    print_matrix(prod)
 
-        //if the scanned character is an operand, add it to output
-        if (c.isLetterOrDigit()) {
-            if (n == 0) {
-                result.add(c.toString())
-                n += 1
-            } else {
-                val id = result.last()
-                result.removeAt(result.size - 1)
-                result.add( id + c.toString())
-            }
-        }
 
-        //if the scanned character is an '(', push it to the stack
-        else if (c == '(') {
-            stack.add(c)
-            n = 0
-        }
+def multiply_matrix():
+    m1 = read_matrix(' first matrix: ')
+    m2 = read_matrix(' second matrix: ')
 
-        //if the scanned character is an ')', pop and output from the stack
-        //until an '(' is encountered
-        else if (c == ')') {
-            n = 0
-            while (stack.isNotEmpty() && stack.last() != '(') {
-                result.add(stack.last().toString())
-                stack.removeAt(stack.size - 1)
-            }
+    if len(m1[0]) != len(m2):
+        print('The operation cannot be performed.')
+        return None
 
-            if (stack.isNotEmpty() && stack.last() != '(')
-                return error //invalid expression
-            else if (stack.isEmpty()) return  error
-            else stack.removeAt(stack.size - 1)
-        }
+    ans = []
 
-        else if (c != ' '){
-            n = 0
-            while(stack.isNotEmpty() && prec(c) <= prec(stack.last())) {
-                if (stack.last() == '(') return error
-                result.add(stack.last().toString())
-                stack.removeAt(stack.size - 1)
-            }
-            stack.add(c)
-        }
+    for l in range(len(m1)):
+        li = []
+        for c in range(len(m2[0])):
 
-        if (c == ' ') n = 0
-    }
+            li.append(prod_vector(m1[l], [row[c] for row in m2]))
+        ans.append(li)
 
-    //pop the operators from the stack
-    while (stack.isNotEmpty()) {
-        if (stack.last() == '(') return error
-        result.add(stack.last().toString())
-        stack.removeAt(stack.size - 1)
-    }
+    print('The result is:')
+    print_matrix(ans)
 
-    return result
-}
 
-fun prec(ch: Char): Int {
-    when (ch) {
-        '+'-> return 1
-        '-'-> return 1
-        '*'-> return 2
-        '/'-> return 2
-        '^'-> return 3
-    }
-    return -1
-}
+def prod_vector(v1, v2):
+    ans = 0
+    for i in range(len(v1)):
+        ans += v1[i] * v2[i]
+    return float(ans)
 
-fun eval(exp: MutableList<String>) {
-    var ans = ""
-    val stack = mutableListOf<String>()
-    while (exp.size >= 1) {
-        stack.add(exp.first())
-        exp.removeAt(0)
 
-        if (stack.last() in variables) {
-            ans = variables[stack.last()].toString()
-            stack.removeAt(stack.size - 1)
-            stack.add(ans)
-        } else if (stack.last().contains("[-+*/^]".toRegex())) {
-            if (stack.size == 2) {
-                ans = makeOp(stack.last(), stack[0], "0")
-                stack.removeAt(stack.size - 1)
-                stack.removeAt(stack.size - 1)
-            } else {
-                val stackSize = stack.size
-                ans = makeOp(stack.last(), stack[stackSize - 2], stack[stackSize - 3])
-                stack.removeAt(stack.size - 1)
-                stack.removeAt(stack.size - 1)
-                stack.removeAt(stack.size - 1)
-            }
-            stack.add(ans)
-        }
-    }
+def transpose(m, ls=0, le=0, lp=1, cs=0, ce=0, cp=1, diag=True):
+    m2 = []
+    for l in range(ls, le, lp):
+        line = []
+        for c in range(cs, ce, cp):
+            if diag:
+                line.append(m[c][l])
+            else:
+                line.append(m[l][c])
+        m2.append(line)
+    return m2
 
-    println(stack[0])
-}
 
-fun makeOp(op: String, b: String, a: String): String {
-    var ans: BigInteger = BigInteger.ZERO
+def transpose_menu():
 
-    when (op) {
-        "+" -> ans = BigInteger(a) + BigInteger(b)
-        "-" -> ans = BigInteger(a) - BigInteger(b)
-        "*" -> ans = BigInteger(a) * BigInteger(b)
-        "/" -> ans = BigInteger(a) / BigInteger(b)
-        "^" -> ans = BigInteger(a).pow(b.toInt())
-    }
+    def main_diag(m):
+        return transpose(m, le=len(m), ce=len(m[0]))
 
-    return  ans.toString()
-}
+    def side_diag(m):
+        return transpose(m, ls=len(m)-1, le=-1, lp=-1,
+                         cs=len(m[0])-1, ce=-1, cp=-1)
 
-fun clearRepeated(exp: String): String{
-    val stack = mutableListOf<Char>()
+    def vert_line(m):
+        return transpose(m, le=len(m), cs=len(m[0])-1, ce=-1, cp=-1, diag=False)
 
-    for (ch in exp) {
-        if (stack.size >= 1) {
-            if (ch == stack.last()) {
-                if (stack.last() == '-') {
-                    stack.removeAt(stack.size - 1)
-                    stack.add('+')
-                } else if (!stack.last().toString().contains("[+()-]".toRegex())) {
-                    if (ch.toString().contains("[0-9]".toRegex())) stack.add(ch)
-                    else return "Invalid expression"
-                } else stack.add(ch)
-            } else if (stack.last().toString().contains("[*/^]".toRegex()) && ch.toString()
-                            .contains("[*/^]".toRegex())) {
-                return "Invalid expression"
-            }
+    def horizon_line(m):
+        return transpose(m, ls=len(m)-1, le=-1, lp=-1, ce=len(m[0]), diag=False)
 
-            else stack.add(ch)
-        } else stack.add(ch)
-    }
+    tranp_types = {'1': main_diag, '2': side_diag, '3': vert_line,
+                   '4': horizon_line}
+    print("\n1.Main diagonal\n"
+          "2. Side diagonal\n"
+          "3. Vertical line\n"
+          "4. Horizontal line\n")
 
-    return stack.joinToString(separator = "")
-}
+    opt = input('Your choice: ')
+    matrix = read_matrix(' matrix: ')
+    ans = tranp_types[opt](matrix)
+    print("the result is:")
+    print_matrix(ans)
 
-fun assertVar(line: String){
-    val defVar = line.split("=")
 
-    if (defVar.size > 2) {
-        println("Invalid assignment")
-        return
-    }
+def determinant(x):
+    det = 0
+    if len(x) == 1:
+        return x[0][0]
 
-    if (checkVarName(defVar[0], "identifier")){
-        if (defVar[1].contains("[a-zA-Z]".toRegex())) {
-            if (checkVarName(defVar[1], "assignment")){
-                if (variables.contains(defVar[1])) {
-                    variables[defVar[0]] = variables.getValue(defVar[1])
-                } else println("Unknown variable")
-            }
-        } else {
-            variables[defVar[0]] = BigInteger(defVar[1])
-        }
-    }
-}
+    if len(x) == 2:
+        return cofactor(x, 0, 0)
 
-fun checkVarName(varName: String, id: String): Boolean{
-    if (varName.contains("[0-9]".toRegex())) {
-        println("Invalid $id")
-        return false
-    }
+    for i in range(len(x)):
+        det += (-1)**i*x[0][i]*cofactor(x[:], 0, i)
+    return det
 
-    return true
-}
+
+def determinant_menu():
+    matrix = read_matrix(' matrix: ')
+    det = determinant(matrix)
+    print(f'The result is:\n {det}')
+
+def cofactor(m, l, c):
+
+    if len(m[0]) == 2:
+        return m[0][0] * m[1][1] - m[0][1] * m[1][0]
+
+    aux = [x[:] for x in m[:]]
+    del aux[l]
+
+    for l in aux:
+        del l[c]
+
+    if len(aux) == 2:
+        return cofactor(aux, 0, 0)
+
+    dt = 0
+    for i in range(len(aux)):
+        dt += (-1)**i*aux[0][i]*cofactor(aux[:], 0, i)
+
+    return dt
+
+def inverse_matrix():
+    matrix = read_matrix(' matrix: ')
+    det_m = determinant(matrix)
+
+    if det_m == 0.0:
+        print("This matrix doesn't have an inverse.")
+        return None
+
+    c_matrix = []
+
+    for i in range(len(matrix)):
+        line = []
+        for j in range(len(matrix[0])):
+            line.append((-1)**(i+j)*cofactor(matrix, i, j))
+        c_matrix.append(line)
+
+    c_matrix = transpose(c_matrix, le=len(c_matrix), ce=len(c_matrix[0]))
+    inv_matrix = mult_const(c_matrix, 1 / det_m)
+    print("The result is:\n")
+    print_matrix(inv_matrix, fmt="f")
+
+
+def menu():
+    functions = {'1': add_matrix, '2': multiply_matrix_const,
+                 '3': multiply_matrix, '4': transpose_menu,
+                 '5': determinant_menu, '6': inverse_matrix,
+                 '0': exit}
+    print("1. Add matrices\n"
+          "2. Multiply matrix by a constant\n"
+          "3. Multiply matrices\n"
+          "4. Transpose matrix\n"
+          "5. Calculate a determinant\n"
+          "6: Inverse matrix\n"
+          "0. Exit")
+
+    cmd = input('Your choice: ')
+    functions[cmd]()
+    print()
+
+
+while True:
+    menu()
